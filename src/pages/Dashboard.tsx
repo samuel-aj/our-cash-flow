@@ -6,9 +6,12 @@ import { SummaryCards, ExpensesTotalCard } from '@/components/SummaryCards';
 import { TransactionList } from '@/components/TransactionList';
 import { Sidebar } from '@/components/Sidebar';
 import { QuickAddModal } from '@/components/QuickAddModal';
+import { EditExpenseModal } from '@/components/EditExpenseModal';
+import type { Expense } from '@/types/expense';
 
 function DashboardContent() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   // Keyboard shortcut for quick add
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -52,7 +55,7 @@ function DashboardContent() {
               <h2 className="text-lg font-semibold text-foreground mb-4">
                 Lançamentos do mês
               </h2>
-              <TransactionList />
+              <TransactionList onEdit={(expense) => setEditingExpense(expense)} />
             </div>
           </div>
         </main>
@@ -65,6 +68,13 @@ function DashboardContent() {
       <QuickAddModal
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
+      />
+
+      {/* Edit Expense Modal */}
+      <EditExpenseModal
+        expense={editingExpense}
+        open={!!editingExpense}
+        onClose={() => setEditingExpense(null)}
       />
 
       {/* Keyboard Shortcuts Footer */}

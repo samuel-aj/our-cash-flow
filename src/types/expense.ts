@@ -38,11 +38,17 @@ export interface Expense {
   recurringParentId?: string; // Reference to original recurring expense
 }
 
+export interface CategoryBudget {
+  categoryId: string;
+  plannedAmount: number;
+}
+
 export interface MonthlyBudget {
   id: string;
   month: string; // YYYY-MM format
   income: number;
   fixedCommitments: FixedCommitment[];
+  categoryBudgets?: CategoryBudget[];
   closedAt?: string;
   notes?: string;
 }
