@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatCurrency, formatMonth, getUpcomingInstallments } from '@/lib/finance-utils';
-import { Settings, ChevronRight, Plus, X, CreditCard } from 'lucide-react';
+import { Settings, ChevronRight, CreditCard, Repeat, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,15 +18,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import type { FixedCommitment } from '@/types/expense';
 
 export function Sidebar() {
-  const { state, getCurrentBudget, updateBudget, addFixedCommitment, removeFixedCommitment } = useFinance();
+  const { state, getCurrentBudget, updateBudget, getRecurringExpenses, removeRecurringExpense } = useFinance();
   const budget = getCurrentBudget();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [income, setIncome] = useState(budget?.income.toString() || '');
-  const [newCommitmentName, setNewCommitmentName] = useState('');
-  const [newCommitmentAmount, setNewCommitmentAmount] = useState('');
+
+  const recurringExpenses = getRecurringExpenses();
+  const recurringTotal = recurringExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   const upcomingInstallments = getUpcomingInstallments(
     state.installments,
@@ -42,17 +42,6 @@ export function Sidebar() {
       fixedCommitments: budget?.fixedCommitments || [],
     });
     setSettingsOpen(false);
-  };
-
-  const handleAddCommitment = () => {
-    if (newCommitmentName && newCommitmentAmount) {
-      addFixedCommitment({
-        name: newCommitmentName,
-        amount: parseFloat(newCommitmentAmount.replace(',', '.')) || 0,
-      });
-      setNewCommitmentName('');
-      setNewCommitmentAmount('');
-    }
   };
 
   return (
@@ -87,56 +76,6 @@ export function Sidebar() {
                   />
                 </div>
 
-                <div className="space-y-3">
-                  <Label>Compromissos fixos</Label>
-                  {budget?.fixedCommitments.map((commitment) => (
-                    <div
-                      key={commitment.id}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium text-sm">{commitment.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatCurrency(commitment.amount)}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-negative"
-                        onClick={() => removeFixedCommitment(commitment.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Nome"
-                      value={newCommitmentName}
-                      onChange={(e) => setNewCommitmentName(e.target.value)}
-                      className="input-focus flex-1"
-                    />
-                    <Input
-                      placeholder="Valor"
-                      type="text"
-                      inputMode="decimal"
-                      value={newCommitmentAmount}
-                      onChange={(e) => setNewCommitmentAmount(e.target.value)}
-                      className="input-focus w-24"
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      onClick={handleAddCommitment}
-                      disabled={!newCommitmentName || !newCommitmentAmount}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
                 <Button onClick={handleSaveBudget} className="w-full">
                   Salvar
                 </Button>
@@ -155,24 +94,50 @@ export function Sidebar() {
             </p>
           </div>
 
-          {budget && budget.fixedCommitments.length > 0 && (
+          {recurringExpenses.length > 0 && (
             <Collapsible defaultOpen>
               <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                <span className="text-sm font-medium">
-                  Compromissos fixos ({budget.fixedCommitments.length})
-                </span>
-                <ChevronRight className="h-4 w-4 transform transition-transform ui-open:rotate-90" />
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    Compromissos fixos ({recurringExpenses.length})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {formatCurrency(recurringTotal)}
+                  </span>
+                  <ChevronRight className="h-4 w-4 transform transition-transform ui-open:rotate-90" />
+                </div>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-1 mt-1">
-                {budget.fixedCommitments.map((commitment) => (
-                  <div
-                    key={commitment.id}
-                    className="flex items-center justify-between px-3 py-2 text-sm"
-                  >
-                    <span className="text-muted-foreground">{commitment.name}</span>
-                    <span className="font-medium">{formatCurrency(commitment.amount)}</span>
-                  </div>
-                ))}
+                {recurringExpenses.map((expense) => {
+                  const category = state.categories.find(c => c.id === expense.categoryId);
+                  return (
+                    <div
+                      key={expense.id}
+                      className="flex items-center justify-between px-3 py-2 text-sm group"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-foreground">{expense.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Dia {expense.recurringDueDay} • {category?.name}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{formatCurrency(expense.amount)}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 text-negative"
+                          onClick={() => removeRecurringExpense(expense.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </CollapsibleContent>
             </Collapsible>
           )}

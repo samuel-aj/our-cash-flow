@@ -33,6 +33,9 @@ export interface Expense {
   parentExpenseId?: string; // Reference to original installment expense
   notes?: string;
   createdAt: string;
+  isRecurring?: boolean; // Fixed monthly commitment
+  recurringDueDay?: number; // Day of month (1-31)
+  recurringParentId?: string; // Reference to original recurring expense
 }
 
 export interface MonthlyBudget {

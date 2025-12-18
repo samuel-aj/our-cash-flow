@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
 import { getExpensesByDate, formatCurrency, formatShortDate } from '@/lib/finance-utils';
-import { Pencil, Trash2, CreditCard, Banknote, Smartphone, ArrowLeftRight } from 'lucide-react';
+import { Pencil, Trash2, CreditCard, Banknote, Smartphone, ArrowLeftRight, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -130,6 +130,12 @@ export function TransactionList({ onEdit }: TransactionListProps) {
                           </p>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                             <PaymentIcon className="h-3 w-3" />
+                            {expense.recurringParentId && (
+                              <span className="flex items-center gap-1 text-primary">
+                                <Repeat className="h-3 w-3" />
+                                Fixo
+                              </span>
+                            )}
                             {expense.isInstallment && expense.totalInstallments && (
                               <span className="text-primary">
                                 {expense.installmentNumber || 1}/{expense.totalInstallments}
