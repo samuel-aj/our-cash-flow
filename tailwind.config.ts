@@ -15,7 +15,7 @@ export default {
   	extend: {
   		fontFamily: {
   			sans: [
-  				'Montserrat',
+  				'Inter',
   				'ui-sans-serif',
   				'system-ui',
   				'-apple-system',
@@ -28,7 +28,7 @@ export default {
   				'sans-serif'
   			],
   			serif: [
-  				'Cormorant Garamond',
+  				'Lora',
   				'ui-serif',
   				'Georgia',
   				'Cambria',
@@ -37,7 +37,7 @@ export default {
   				'serif'
   			],
   			mono: [
-  				'IBM Plex Mono',
+  				'Space Mono',
   				'ui-monospace',
   				'SFMono-Regular',
   				'Menlo',
@@ -217,7 +217,7 @@ export default {
   					transform: 'scale(1)'
   				}
   			},
-  			'shake': {
+  			shake: {
   				'0%, 100%': {
   					transform: 'translateX(0)'
   				},
@@ -244,7 +244,7 @@ export default {
   			'slide-up': 'slide-up 0.3s ease-out',
   			'slide-down': 'slide-down 0.3s ease-out',
   			'number-pulse': 'number-pulse 0.4s cubic-bezier(0.22, 0.9, 0.26, 1)',
-  			'shake': 'shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97)'
+  			shake: 'shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97)'
   		}
   	}
   },
