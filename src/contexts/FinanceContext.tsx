@@ -11,6 +11,7 @@ import {
 } from '@/types/expense';
 import { generateId, getCurrentMonth, calculateInstallments, getToday } from '@/lib/finance-utils';
 import { toast } from '@/hooks/use-toast';
+import { format, parse, getDaysInMonth } from 'date-fns';
 
 const STORAGE_KEY = 'controle-gastos-data';
 
@@ -154,6 +155,8 @@ interface FinanceContextType {
   getCurrentBudget: () => MonthlyBudget | undefined;
   undo: () => void;
   canUndo: boolean;
+  getRecurringExpenses: () => Expense[];
+  removeRecurringExpense: (id: string) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
@@ -179,6 +182,42 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  // Generate recurring expenses for the current month
+  useEffect(() => {
+    const recurringParents = state.expenses.filter(e => e.isRecurring && !e.recurringParentId);
+    const currentMonth = state.currentMonth;
+    
+    recurringParents.forEach(parent => {
+      // Check if this recurring expense already has an entry for this month
+      const existingForMonth = state.expenses.find(
+        e => e.recurringParentId === parent.id && e.date.startsWith(currentMonth)
+      );
+      
+      if (!existingForMonth) {
+        // Generate the expense for this month
+        const dueDay = parent.recurringDueDay || 1;
+        const monthDate = parse(currentMonth, 'yyyy-MM', new Date());
+        const maxDay = getDaysInMonth(monthDate);
+        const actualDay = Math.min(dueDay, maxDay);
+        const dateStr = `${currentMonth}-${actualDay.toString().padStart(2, '0')}`;
+        
+        const newExpense: Expense = {
+          id: generateId(),
+          date: dateStr,
+          description: parent.description,
+          amount: parent.amount,
+          categoryId: parent.categoryId,
+          paymentMethod: parent.paymentMethod,
+          isInstallment: false,
+          createdAt: new Date().toISOString(),
+          recurringParentId: parent.id,
+        };
+        
+        dispatch({ type: 'ADD_EXPENSE', payload: newExpense });
+      }
+    });
+  }, [state.currentMonth, state.expenses]);
 
   const saveForUndo = useCallback(() => {
     setPreviousState(state);
@@ -327,6 +366,27 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return state.budgets.find((b) => b.month === state.currentMonth);
   }, [state.budgets, state.currentMonth]);
 
+  const getRecurringExpenses = useCallback(() => {
+    return state.expenses.filter(e => e.isRecurring && !e.recurringParentId);
+  }, [state.expenses]);
+
+  const removeRecurringExpense = useCallback((id: string) => {
+    saveForUndo();
+    // Remove the parent recurring expense and all its children
+    const childIds = state.expenses
+      .filter(e => e.recurringParentId === id)
+      .map(e => e.id);
+    
+    [...childIds, id].forEach(expenseId => {
+      dispatch({ type: 'DELETE_EXPENSE', payload: expenseId });
+    });
+    
+    toast({
+      title: 'Compromisso fixo removido',
+      description: 'O compromisso e seus lançamentos foram excluídos.',
+    });
+  }, [state.expenses, saveForUndo]);
+
   const undo = useCallback(() => {
     if (previousState) {
       dispatch({ type: 'UNDO_LAST', payload: previousState });
@@ -355,6 +415,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         getCurrentBudget,
         undo,
         canUndo: !!previousState,
+        getRecurringExpenses,
+        removeRecurringExpense,
       }}
     >
       {children}

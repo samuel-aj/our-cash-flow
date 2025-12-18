@@ -67,16 +67,20 @@ export function calculateAvailable(
   installments: Installment[],
   month: string
 ): number {
-  if (!budget) return 0;
-
-  const income = budget.income;
-  const fixedTotal = budget.fixedCommitments.reduce((sum, c) => sum + c.amount, 0);
+  const income = budget?.income || 0;
+  const fixedTotal = budget?.fixedCommitments.reduce((sum, c) => sum + c.amount, 0) || 0;
   
-  // Filter expenses for current month (excluding installment child entries)
+  // Filter expenses for current month (excluding recurring parent entries)
   const monthExpenses = expenses.filter(
-    (e) => e.date.startsWith(month) && !e.parentExpenseId
+    (e) => e.date.startsWith(month) && !e.parentExpenseId && !e.isRecurring
   );
   const expensesTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
+  
+  // Get recurring expenses generated for this month
+  const recurringThisMonth = expenses.filter(
+    (e) => e.date.startsWith(month) && e.recurringParentId
+  );
+  const recurringTotal = recurringThisMonth.reduce((sum, e) => sum + e.amount, 0);
   
   // Filter installments due this month
   const monthInstallments = installments.filter(
@@ -84,7 +88,7 @@ export function calculateAvailable(
   );
   const installmentsTotal = monthInstallments.reduce((sum, i) => sum + i.amount, 0);
   
-  return income - fixedTotal - installmentsTotal - expensesTotal;
+  return income - fixedTotal - installmentsTotal - expensesTotal - recurringTotal;
 }
 
 /**
@@ -94,8 +98,9 @@ export function getExpensesByDate(
   expenses: Expense[],
   month: string
 ): Map<string, Expense[]> {
+  // Filter out recurring parent expenses (they are templates, not actual transactions)
   const monthExpenses = expenses
-    .filter((e) => e.date.startsWith(month))
+    .filter((e) => e.date.startsWith(month) && !(e.isRecurring && !e.recurringParentId))
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   
   const grouped = new Map<string, Expense[]>();

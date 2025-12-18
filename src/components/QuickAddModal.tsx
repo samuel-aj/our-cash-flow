@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
 import { calculateInstallments, formatCurrency, getToday } from '@/lib/finance-utils';
 import { PAYMENT_METHODS, type PaymentMethod } from '@/types/expense';
-import { X, Calculator } from 'lucide-react';
+import { Calculator, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +37,7 @@ export function QuickAddModal({ open, onClose }: QuickAddModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [isInstallment, setIsInstallment] = useState(false);
   const [installments, setInstallments] = useState('2');
+  const [isRecurring, setIsRecurring] = useState(false);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -48,6 +49,7 @@ export function QuickAddModal({ open, onClose }: QuickAddModalProps) {
       setPaymentMethod('card');
       setIsInstallment(false);
       setInstallments('2');
+      setIsRecurring(false);
     }
   }, [open, state.categories]);
 
@@ -65,6 +67,8 @@ export function QuickAddModal({ open, onClose }: QuickAddModalProps) {
       return;
     }
 
+    const dueDay = parseInt(date.split('-')[2], 10);
+    
     const expenseData = {
       date,
       description: description.trim(),
@@ -72,6 +76,8 @@ export function QuickAddModal({ open, onClose }: QuickAddModalProps) {
       categoryId,
       paymentMethod,
       isInstallment,
+      isRecurring,
+      recurringDueDay: isRecurring ? dueDay : undefined,
     };
 
     if (isInstallment) {
@@ -81,7 +87,7 @@ export function QuickAddModal({ open, onClose }: QuickAddModalProps) {
     }
 
     onClose();
-  }, [date, description, parsedAmount, categoryId, paymentMethod, isInstallment, parsedInstallments, addExpense, addInstallmentExpense, onClose]);
+  }, [date, description, parsedAmount, categoryId, paymentMethod, isInstallment, isRecurring, parsedInstallments, addExpense, addInstallmentExpense, onClose]);
 
   // Keyboard shortcut
   useEffect(() => {
@@ -175,6 +181,33 @@ export function QuickAddModal({ open, onClose }: QuickAddModalProps) {
             </div>
           </div>
 
+          {/* Recurring Toggle */}
+          <div className="border rounded-xl p-4 space-y-4 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Repeat className="h-4 w-4 text-primary" />
+                <div>
+                  <Label htmlFor="recurring" className="text-sm font-medium">
+                    Compromisso fixo mensal?
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Repete todo dia {date ? parseInt(date.split('-')[2], 10) : '--'} de cada mês
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="recurring"
+                checked={isRecurring}
+                onCheckedChange={(checked) => {
+                  setIsRecurring(checked);
+                  if (checked) setIsInstallment(false);
+                }}
+                disabled={isInstallment}
+              />
+            </div>
+          </div>
+
+          {/* Installment Toggle */}
           <div className="border rounded-xl p-4 space-y-4 bg-muted/30">
             <div className="flex items-center justify-between">
               <div>
@@ -188,7 +221,11 @@ export function QuickAddModal({ open, onClose }: QuickAddModalProps) {
               <Switch
                 id="installment"
                 checked={isInstallment}
-                onCheckedChange={setIsInstallment}
+                onCheckedChange={(checked) => {
+                  setIsInstallment(checked);
+                  if (checked) setIsRecurring(false);
+                }}
+                disabled={isRecurring}
               />
             </div>
 
