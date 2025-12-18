@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatCurrency, formatMonth, getUpcomingInstallments } from '@/lib/finance-utils';
-import { Settings, ChevronRight, CreditCard, Repeat, X } from 'lucide-react';
+import { Settings, ChevronRight, CreditCard, Repeat, X, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import {
   Sheet,
   SheetContent,
@@ -18,12 +19,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { CategoryBudget } from '@/types/expense';
 
 export function Sidebar() {
   const { state, getCurrentBudget, updateBudget, getRecurringExpenses, removeRecurringExpense } = useFinance();
   const budget = getCurrentBudget();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [income, setIncome] = useState(budget?.income.toString() || '');
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, string>>({});
 
   const recurringExpenses = getRecurringExpenses();
   const recurringTotal = recurringExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -35,13 +39,48 @@ export function Sidebar() {
     3
   );
 
+  // Initialize category budgets when settings open
+  useEffect(() => {
+    if (settingsOpen && budget) {
+      const budgetMap: Record<string, string> = {};
+      budget.categoryBudgets?.forEach(cb => {
+        budgetMap[cb.categoryId] = cb.plannedAmount.toString();
+      });
+      setCategoryBudgets(budgetMap);
+      setIncome(budget.income.toString());
+    }
+  }, [settingsOpen, budget]);
+
   const handleSaveBudget = () => {
+    const parsedCategoryBudgets: CategoryBudget[] = state.categories
+      .map(cat => ({
+        categoryId: cat.id,
+        plannedAmount: parseFloat(categoryBudgets[cat.id]?.replace(',', '.') || '0') || 0,
+      }))
+      .filter(cb => cb.plannedAmount > 0);
+
     updateBudget({
       month: state.currentMonth,
       income: parseFloat(income.replace(',', '.')) || 0,
       fixedCommitments: budget?.fixedCommitments || [],
+      categoryBudgets: parsedCategoryBudgets,
     });
     setSettingsOpen(false);
+  };
+
+  // Calculate spent per category for current month
+  const getSpentByCategory = (categoryId: string): number => {
+    return state.expenses
+      .filter(e => 
+        e.date.startsWith(state.currentMonth) && 
+        e.categoryId === categoryId &&
+        !e.isRecurring // Exclude recurring parent templates
+      )
+      .reduce((sum, e) => sum + e.amount, 0);
+  };
+
+  const getCategoryBudget = (categoryId: string): number => {
+    return budget?.categoryBudgets?.find(cb => cb.categoryId === categoryId)?.plannedAmount || 0;
   };
 
   return (
@@ -58,24 +97,59 @@ export function Sidebar() {
                 <Settings className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent>
+            <SheetContent className="flex flex-col">
               <SheetHeader>
                 <SheetTitle>Configurar Orçamento</SheetTitle>
               </SheetHeader>
-              <div className="mt-6 space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="income">Receita mensal (R$)</Label>
-                  <Input
-                    id="income"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={income}
-                    onChange={(e) => setIncome(e.target.value)}
-                    className="input-focus"
-                  />
-                </div>
+              <ScrollArea className="flex-1 mt-6">
+                <div className="space-y-6 pr-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="income">Receita mensal (R$)</Label>
+                    <Input
+                      id="income"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={income}
+                      onChange={(e) => setIncome(e.target.value)}
+                      className="input-focus"
+                    />
+                  </div>
 
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <PieChart className="h-4 w-4 text-primary" />
+                      <Label>Orçamento por categoria</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Defina quanto você planeja gastar em cada categoria
+                    </p>
+                    
+                    <div className="space-y-3">
+                      {state.categories.map((cat) => (
+                        <div key={cat.id} className="space-y-1">
+                          <Label htmlFor={`cat-${cat.id}`} className="text-sm font-normal">
+                            {cat.name}
+                          </Label>
+                          <Input
+                            id={`cat-${cat.id}`}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            value={categoryBudgets[cat.id] || ''}
+                            onChange={(e) => setCategoryBudgets(prev => ({
+                              ...prev,
+                              [cat.id]: e.target.value
+                            }))}
+                            className="input-focus"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+              <div className="pt-4 border-t mt-4">
                 <Button onClick={handleSaveBudget} className="w-full">
                   Salvar
                 </Button>
@@ -143,6 +217,43 @@ export function Sidebar() {
           )}
         </div>
       </div>
+
+      {/* Category Budgets Progress */}
+      {budget?.categoryBudgets && budget.categoryBudgets.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4">
+            Orçamento por Categoria
+          </h3>
+          <div className="space-y-4">
+            {budget.categoryBudgets.map(cb => {
+              const category = state.categories.find(c => c.id === cb.categoryId);
+              const spent = getSpentByCategory(cb.categoryId);
+              const percentage = cb.plannedAmount > 0 ? Math.min((spent / cb.plannedAmount) * 100, 100) : 0;
+              const isOverBudget = spent > cb.plannedAmount;
+
+              return (
+                <div key={cb.categoryId} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{category?.name}</span>
+                    <span className={isOverBudget ? 'text-negative' : 'text-muted-foreground'}>
+                      {formatCurrency(spent)} / {formatCurrency(cb.plannedAmount)}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={percentage} 
+                    className={`h-2 ${isOverBudget ? '[&>div]:bg-negative' : ''}`}
+                  />
+                  {isOverBudget && (
+                    <p className="text-xs text-negative">
+                      Excedeu {formatCurrency(spent - cb.plannedAmount)}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Upcoming Installments */}
       <div>
