@@ -79,8 +79,11 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: '5', name: 'Saúde', colorIndex: 5 },
   { id: '6', name: 'Educação', colorIndex: 6 },
   { id: '7', name: 'Compras', colorIndex: 7 },
-  { id: '8', name: 'Outros', colorIndex: 8 },
+  { id: '8', name: 'Investimentos', colorIndex: 8 },
+  { id: '9', name: 'Outros', colorIndex: 9 },
 ];
+
+export const INVESTMENT_CATEGORY_ID = '8';
 
 export const PAYMENT_METHODS = [
   { value: 'card', label: 'Cartão' },
