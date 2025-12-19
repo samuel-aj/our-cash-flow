@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatCurrency, getMonthTotal, getInstallmentsTotal } from '@/lib/finance-utils';
-import { Wallet, CalendarClock, CreditCard } from 'lucide-react';
+import { Wallet, CalendarClock, CreditCard, TrendingUp } from 'lucide-react';
+import { INVESTMENT_CATEGORY_ID } from '@/types/expense';
 
 export function SummaryCards() {
   const { state, getCurrentBudget } = useFinance();
@@ -10,7 +11,11 @@ export function SummaryCards() {
   const income = budget?.income || 0;
   const fixedTotal = budget?.fixedCommitments.reduce((sum, c) => sum + c.amount, 0) || 0;
   const installmentsTotal = getInstallmentsTotal(state.installments, state.currentMonth);
-  const expensesTotal = getMonthTotal(state.expenses, state.currentMonth);
+  
+  // Calculate investments for this month
+  const investmentsTotal = state.expenses
+    .filter(e => e.date.startsWith(state.currentMonth) && e.categoryId === INVESTMENT_CATEGORY_ID)
+    .reduce((sum, e) => sum + e.amount, 0);
 
   const cards = [
     {
@@ -34,10 +39,17 @@ export function SummaryCards() {
       color: 'text-warning',
       bgColor: 'bg-warning-light',
     },
+    {
+      label: 'Investido no mês',
+      value: investmentsTotal,
+      icon: TrendingUp,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {cards.map((card, index) => (
         <motion.div
           key={card.label}
