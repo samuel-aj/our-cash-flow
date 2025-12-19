@@ -14,7 +14,278 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      budgets: {
+        Row: {
+          closed_at: string | null
+          created_at: string | null
+          id: string
+          income: number | null
+          month: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string | null
+          id?: string
+          income?: number | null
+          month: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string | null
+          id?: string
+          income?: number | null
+          month?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          color_index: number
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color_index?: number
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color_index?: number
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      category_budgets: {
+        Row: {
+          budget_id: string
+          category_id: string
+          created_at: string | null
+          id: string
+          planned_amount: number
+        }
+        Insert: {
+          budget_id: string
+          category_id: string
+          created_at?: string | null
+          id?: string
+          planned_amount?: number
+        }
+        Update: {
+          budget_id?: string
+          category_id?: string
+          created_at?: string | null
+          id?: string
+          planned_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_budgets_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string | null
+          date: string
+          description: string
+          id: string
+          installment_number: number | null
+          is_installment: boolean | null
+          is_recurring: boolean | null
+          notes: string | null
+          parent_expense_id: string | null
+          payment_method: string
+          recurring_due_day: number | null
+          recurring_parent_id: string | null
+          total_installments: number | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string | null
+          date: string
+          description: string
+          id?: string
+          installment_number?: number | null
+          is_installment?: boolean | null
+          is_recurring?: boolean | null
+          notes?: string | null
+          parent_expense_id?: string | null
+          payment_method?: string
+          recurring_due_day?: number | null
+          recurring_parent_id?: string | null
+          total_installments?: number | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: string
+          installment_number?: number | null
+          is_installment?: boolean | null
+          is_recurring?: boolean | null
+          notes?: string | null
+          parent_expense_id?: string | null
+          payment_method?: string
+          recurring_due_day?: number | null
+          recurring_parent_id?: string | null
+          total_installments?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_parent_expense_id_fkey"
+            columns: ["parent_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_recurring_parent_id_fkey"
+            columns: ["recurring_parent_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fixed_commitments: {
+        Row: {
+          amount: number
+          budget_id: string
+          created_at: string | null
+          due_day: number | null
+          id: string
+          name: string
+        }
+        Insert: {
+          amount: number
+          budget_id: string
+          created_at?: string | null
+          due_day?: number | null
+          id?: string
+          name: string
+        }
+        Update: {
+          amount?: number
+          budget_id?: string
+          created_at?: string | null
+          due_day?: number | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_commitments_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          due_month: string
+          expense_id: string
+          id: string
+          installment_index: number
+          paid: boolean | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          due_month: string
+          expense_id: string
+          id?: string
+          installment_index: number
+          paid?: boolean | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          due_month?: string
+          expense_id?: string
+          id?: string
+          installment_index?: number
+          paid?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

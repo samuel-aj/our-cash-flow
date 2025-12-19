@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
+import { useAuth } from '@/hooks/useAuth';
 import { formatMonth, getCurrentMonth } from '@/lib/finance-utils';
 import { addMonths, subMonths, parse, format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Undo2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Undo2, LogOut, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -15,15 +16,29 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface HeaderProps {
   onQuickAdd: () => void;
+  onUpload: () => void;
 }
 
-export function Header({ onQuickAdd }: HeaderProps) {
+export function Header({ onQuickAdd, onUpload }: HeaderProps) {
   const { state, setCurrentMonth, closeDay, undo, canUndo } = useFinance();
+  const { user, signOut } = useAuth();
   const [closeDayOpen, setCloseDayOpen] = useState(false);
   const [notes, setNotes] = useState('');
+
+  const userInitials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : user?.email?.slice(0, 2).toUpperCase() || 'U';
 
   const isCurrentMonth = state.currentMonth === getCurrentMonth();
 
@@ -120,6 +135,15 @@ export function Header({ onQuickAdd }: HeaderProps) {
             </Button>
 
             <Button
+              variant="outline"
+              onClick={onUpload}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Upload
+            </Button>
+
+            <Button
               onClick={onQuickAdd}
               className="gap-2 bg-primary hover:bg-primary/90"
             >
@@ -129,6 +153,28 @@ export function Header({ onQuickAdd }: HeaderProps) {
                 N
               </kbd>
             </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium truncate">{user?.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>

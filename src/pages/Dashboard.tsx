@@ -7,10 +7,12 @@ import { TransactionList } from '@/components/TransactionList';
 import { Sidebar } from '@/components/Sidebar';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { EditExpenseModal } from '@/components/EditExpenseModal';
+import { UploadModal } from '@/components/UploadModal';
 import type { Expense } from '@/types/expense';
 
 function DashboardContent() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   // Keyboard shortcut for quick add
@@ -35,7 +37,7 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header onQuickAdd={() => setQuickAddOpen(true)} />
+      <Header onQuickAdd={() => setQuickAddOpen(true)} onUpload={() => setUploadOpen(true)} />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content */}
@@ -75,6 +77,12 @@ function DashboardContent() {
         expense={editingExpense}
         open={!!editingExpense}
         onClose={() => setEditingExpense(null)}
+      />
+
+      {/* Upload Modal */}
+      <UploadModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
       />
 
       {/* Keyboard Shortcuts Footer */}
