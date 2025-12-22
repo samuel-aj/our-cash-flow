@@ -313,28 +313,34 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
                       className={cn(
-                        'flex items-center gap-4 p-3 rounded-lg border transition-colors',
+                        'flex items-center gap-3 p-3 rounded-lg border transition-colors',
                         t.selected ? 'bg-primary/5 border-primary/20' : 'bg-muted/50'
                       )}
                     >
                       <Checkbox
                         checked={t.selected}
                         onCheckedChange={() => toggleTransaction(index)}
+                        className="shrink-0"
                       />
                       
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{t.description}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <p className="font-medium truncate text-sm" title={t.description}>
+                          {t.description}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
                           <span>{t.date}</span>
                           <span>•</span>
-                          <span>{getCategoryName(t.categoryId)}</span>
+                          <span className="truncate max-w-[80px]">{getCategoryName(t.categoryId)}</span>
                           <span>•</span>
                           <span className="capitalize">{t.paymentMethod}</span>
                         </div>
                       </div>
                       
-                      <p className="font-semibold text-negative whitespace-nowrap">
-                        -{formatCurrency(t.amount)}
+                      <p className={cn(
+                        "font-semibold whitespace-nowrap shrink-0 text-sm",
+                        t.amount >= 0 ? "text-negative" : "text-positive"
+                      )}>
+                        {t.amount >= 0 ? '-' : '+'}{formatCurrency(Math.abs(t.amount))}
                       </p>
                     </motion.div>
                   ))}
@@ -344,9 +350,14 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="text-sm">
                   <span className="text-muted-foreground">Total selecionado: </span>
-                  <span className="font-semibold text-negative">
-                    -{formatCurrency(transactions.filter(t => t.selected).reduce((sum, t) => sum + t.amount, 0))}
-                  </span>
+                  {(() => {
+                    const total = transactions.filter(t => t.selected).reduce((sum, t) => sum + t.amount, 0);
+                    return (
+                      <span className={cn("font-semibold", total >= 0 ? "text-negative" : "text-positive")}>
+                        {total >= 0 ? '-' : '+'}{formatCurrency(Math.abs(total))}
+                      </span>
+                    );
+                  })()}
                 </div>
                 
                 <div className="flex gap-2">

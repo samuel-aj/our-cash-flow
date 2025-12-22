@@ -61,7 +61,7 @@ serve(async (req) => {
 
 Para cada transação, retorne:
 - description: descrição da compra/transação
-- amount: valor (apenas números, sem R$)
+- amount: valor (apenas números, sem R$). Use valor POSITIVO para gastos/saídas e valor NEGATIVO para receitas/entradas.
 - date: data no formato YYYY-MM-DD (se não encontrar a data, use null)
 - paymentMethod: "card", "pix", "cash" ou "transfer" (baseado no contexto)
 
@@ -70,12 +70,16 @@ IMPORTANTE:
 - Ignore saldos, totais e informações que não são transações
 - Se for uma fatura de cartão, o paymentMethod é "card"
 - Se for um extrato bancário, analise cada transação individualmente
-- Valores devem ser positivos (gastos)
+- DIFERENCIE entre entradas e saídas:
+  - "Transferência RECEBIDA" ou "Depósito" = valor NEGATIVO (é dinheiro entrando)
+  - "Transferência ENVIADA" ou "Pagamento" = valor POSITIVO (é dinheiro saindo)
+  - Compras, faturas, boletos = valor POSITIVO (gastos)
 
 Responda APENAS com um JSON válido no formato:
 {
   "transactions": [
     {"description": "...", "amount": 123.45, "date": "2024-01-15", "paymentMethod": "card"},
+    {"description": "Transferência recebida...", "amount": -500.00, "date": "2024-01-15", "paymentMethod": "pix"},
     ...
   ]
 }`;
@@ -141,12 +145,37 @@ Responda APENAS com um JSON válido no formato:
       console.error('Failed to parse AI response:', parseError);
     }
 
-    // Add category to each transaction
-    const enrichedTransactions = transactions.map((t: any) => ({
-      ...t,
-      categoryId: categorizeExpense(t.description),
-      amount: Math.abs(parseFloat(t.amount) || 0),
-    }));
+    // Add category to each transaction, preserving the sign for income vs expense
+    const enrichedTransactions = transactions.map((t: any) => {
+      const amount = parseFloat(t.amount) || 0;
+      const description = (t.description || '').toLowerCase();
+      
+      // Double-check: if description indicates income but amount is positive, flip it
+      const isIncome = description.includes('recebid') || 
+                       description.includes('depósito') || 
+                       description.includes('deposito') ||
+                       description.includes('crédito em conta') ||
+                       description.includes('credito em conta');
+      
+      const isExpense = description.includes('enviad') || 
+                        description.includes('pagamento') || 
+                        description.includes('compra') ||
+                        description.includes('fatura') ||
+                        description.includes('boleto');
+      
+      let finalAmount = amount;
+      if (isIncome && amount > 0) {
+        finalAmount = -Math.abs(amount); // Income should be negative (money coming in)
+      } else if (isExpense && amount < 0) {
+        finalAmount = Math.abs(amount); // Expense should be positive (money going out)
+      }
+      
+      return {
+        ...t,
+        categoryId: categorizeExpense(t.description),
+        amount: finalAmount,
+      };
+    });
 
     console.log(`Extracted ${enrichedTransactions.length} transactions`);
 
