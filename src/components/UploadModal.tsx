@@ -198,7 +198,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="w-[min(42rem,calc(100vw-2rem))] max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
@@ -304,8 +304,8 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                 </Button>
               </div>
 
-              <ScrollArea className="h-[300px] rounded-lg border">
-                <div className="p-4 space-y-2">
+              <ScrollArea className="h-[300px] w-full rounded-lg border overflow-x-hidden">
+                <div className="p-4 space-y-2 max-w-full">
                   {transactions.map((t, index) => (
                     <motion.div
                       key={index}
@@ -313,7 +313,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
                       className={cn(
-                        'flex items-center gap-3 p-3 rounded-lg border transition-colors',
+                        'w-full max-w-full overflow-hidden flex items-center gap-3 p-3 rounded-lg border transition-colors',
                         t.selected ? 'bg-primary/5 border-primary/20' : 'bg-muted/50'
                       )}
                     >
@@ -322,24 +322,26 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                         onCheckedChange={() => toggleTransaction(index)}
                         className="shrink-0"
                       />
-                      
+
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <p className="font-medium truncate text-sm" title={t.description}>
                           {t.description}
                         </p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
-                          <span>{t.date}</span>
-                          <span>•</span>
-                          <span className="truncate max-w-[80px]">{getCategoryName(t.categoryId)}</span>
-                          <span>•</span>
-                          <span className="capitalize">{t.paymentMethod}</span>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 overflow-hidden">
+                          <span className="shrink-0">{t.date}</span>
+                          <span className="shrink-0">•</span>
+                          <span className="truncate min-w-0">{getCategoryName(t.categoryId)}</span>
+                          <span className="shrink-0">•</span>
+                          <span className="shrink-0 capitalize">{t.paymentMethod}</span>
                         </div>
                       </div>
-                      
-                      <p className={cn(
-                        "font-semibold whitespace-nowrap shrink-0 text-sm",
-                        t.amount >= 0 ? "text-negative" : "text-positive"
-                      )}>
+
+                      <p
+                        className={cn(
+                          'font-semibold whitespace-nowrap shrink-0 text-sm',
+                          t.amount >= 0 ? 'text-negative' : 'text-positive'
+                        )}
+                      >
                         {t.amount >= 0 ? '-' : '+'}{formatCurrency(Math.abs(t.amount))}
                       </p>
                     </motion.div>
@@ -347,27 +349,31 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                 </div>
               </ScrollArea>
 
-              <div className="flex items-center justify-between pt-4 border-t">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Total selecionado: </span>
-                  {(() => {
-                    const total = transactions.filter(t => t.selected).reduce((sum, t) => sum + t.amount, 0);
-                    return (
-                      <span className={cn("font-semibold", total >= 0 ? "text-negative" : "text-positive")}>
-                        {total >= 0 ? '-' : '+'}{formatCurrency(Math.abs(total))}
-                      </span>
-                    );
-                  })()}
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleClose}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleImport} disabled={selectedCount === 0}>
-                    <Check className="h-4 w-4 mr-2" />
-                    Importar {selectedCount} item(s)
-                  </Button>
+              <div className="pt-4 border-t">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Total selecionado: </span>
+                    {(() => {
+                      const total = transactions
+                        .filter(t => t.selected)
+                        .reduce((sum, t) => sum + t.amount, 0);
+                      return (
+                        <span className={cn('font-semibold', total >= 0 ? 'text-negative' : 'text-positive')}>
+                          {total >= 0 ? '-' : '+'}{formatCurrency(Math.abs(total))}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleImport} disabled={selectedCount === 0} className="w-full sm:w-auto">
+                      <Check className="h-4 w-4 mr-2" />
+                      Importar {selectedCount} item(s)
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>

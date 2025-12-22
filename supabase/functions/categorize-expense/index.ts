@@ -151,17 +151,25 @@ Responda APENAS com um JSON válido no formato:
       const description = (t.description || '').toLowerCase();
       
       // Double-check: if description indicates income but amount is positive, flip it
-      const isIncome = description.includes('recebid') || 
-                       description.includes('depósito') || 
-                       description.includes('deposito') ||
-                       description.includes('crédito em conta') ||
-                       description.includes('credito em conta');
-      
-      const isExpense = description.includes('enviad') || 
-                        description.includes('pagamento') || 
-                        description.includes('compra') ||
-                        description.includes('fatura') ||
-                        description.includes('boleto');
+      const isIncome =
+        description.includes('transferência recebida') ||
+        description.includes('transferencia recebida') ||
+        description.includes('recebid') ||
+        description.includes('depósito') ||
+        description.includes('deposito') ||
+        description.includes('crédito em conta') ||
+        description.includes('credito em conta') ||
+        description.includes('estorno') ||
+        description.includes('reembolso');
+
+      const isExpense =
+        description.includes('transferência enviada') ||
+        description.includes('transferencia enviada') ||
+        description.includes('enviad') ||
+        description.includes('pagamento') ||
+        description.includes('compra') ||
+        description.includes('fatura') ||
+        description.includes('boleto');
       
       let finalAmount = amount;
       if (isIncome && amount > 0) {
