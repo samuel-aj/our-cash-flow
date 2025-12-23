@@ -198,7 +198,13 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[min(42rem,calc(100vw-2rem))] max-w-2xl">
+      <DialogContent
+        className={cn(
+          // Always fit inside viewport on mobile; prevent horizontal overflow from long text
+          'w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden',
+          'sm:w-[min(42rem,calc(100vw-2rem))] sm:max-w-2xl'
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
@@ -291,13 +297,14 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
               exit={{ opacity: 0 }}
               className="space-y-4"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <p className="text-sm text-muted-foreground">
                   {transactions.length} transação(ões) encontrada(s)
                 </p>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="self-start sm:self-auto"
                   onClick={() => setTransactions(prev => prev.map(t => ({ ...t, selected: !selectedCount })))}
                 >
                   {selectedCount === transactions.length ? 'Desmarcar todos' : 'Selecionar todos'}
@@ -365,7 +372,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                     })()}
                   </div>
 
-                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                     <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">
                       Cancelar
                     </Button>
