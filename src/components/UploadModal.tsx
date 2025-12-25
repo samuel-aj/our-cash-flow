@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { formatCurrency, getToday } from '@/lib/finance-utils';
+import { formatCurrency, getToday, getCurrentMonth } from '@/lib/finance-utils';
 import { toast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -14,8 +15,21 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, FileImage, FileText, Loader2, Check, X, AlertCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Upload, FileImage, FileText, Loader2, Check, X, AlertCircle, Wallet, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface IncomeCategory {
+  id: string;
+  name: string;
+  color_index: number;
+}
 
 interface ExtractedTransaction {
   description: string;
@@ -23,6 +37,8 @@ interface ExtractedTransaction {
   date: string | null;
   paymentMethod: 'card' | 'pix' | 'cash' | 'transfer';
   categoryId: string;
+  isIncome?: boolean;
+  incomeCategoryId?: string;
   selected?: boolean;
 }
 
@@ -33,14 +49,38 @@ interface UploadModalProps {
 
 export function UploadModal({ open, onClose }: UploadModalProps) {
   const { addExpense, state } = useFinance();
+  const { user } = useAuth();
   const [step, setStep] = useState<'upload' | 'processing' | 'review'>('upload');
   const [transactions, setTransactions] = useState<ExtractedTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch income categories when modal opens
+  useEffect(() => {
+    if (open && user) {
+      fetchIncomeCategories();
+    }
+  }, [open, user]);
+
+  const fetchIncomeCategories = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('income_categories')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('name');
+    setIncomeCategories(data || []);
+  };
 
   const getCategoryName = (categoryId: string) => {
     return state.categories.find(c => c.id === categoryId)?.name || 'Outros';
+  };
+
+  const getIncomeCategoryName = (categoryId: string | undefined) => {
+    if (!categoryId) return 'Sem categoria';
+    return incomeCategories.find(c => c.id === categoryId)?.name || 'Sem categoria';
   };
 
   const handleFile = async (file: File) => {
@@ -156,7 +196,7 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
     ));
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     const selectedTransactions = transactions.filter(t => t.selected);
     
     if (selectedTransactions.length === 0) {
@@ -168,7 +208,11 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
       return;
     }
 
-    selectedTransactions.forEach(t => {
+    const expenses = selectedTransactions.filter(t => !t.isIncome);
+    const incomes = selectedTransactions.filter(t => t.isIncome);
+
+    // Add expenses via context
+    expenses.forEach(t => {
       addExpense({
         date: t.date || getToday(),
         description: t.description,
@@ -179,18 +223,60 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
       });
     });
 
+    // Add incomes directly to Supabase
+    if (incomes.length > 0 && user) {
+      const currentMonth = getCurrentMonth();
+      const incomeRecords = incomes.map(t => ({
+        user_id: user.id,
+        month: currentMonth,
+        description: t.description,
+        amount: t.amount,
+        category_id: t.incomeCategoryId || null,
+        date: t.date || getToday(),
+        notes: null,
+      }));
+
+      const { error } = await supabase.from('incomes').insert(incomeRecords);
+      if (error) {
+        console.error('Error inserting incomes:', error);
+        toast({
+          title: 'Erro ao importar receitas',
+          description: 'Algumas receitas não foram importadas.',
+          variant: 'destructive',
+        });
+      }
+    }
+
+    const expenseCount = expenses.length;
+    const incomeCount = incomes.length;
+    let description = '';
+    if (expenseCount > 0 && incomeCount > 0) {
+      description = `${expenseCount} gasto(s) e ${incomeCount} receita(s) adicionado(s).`;
+    } else if (expenseCount > 0) {
+      description = `${expenseCount} gasto(s) adicionado(s).`;
+    } else {
+      description = `${incomeCount} receita(s) adicionada(s).`;
+    }
+
     toast({
       title: 'Transações importadas!',
-      description: `${selectedTransactions.length} lançamento(s) adicionado(s).`,
+      description,
     });
 
     handleClose();
+  };
+
+  const setIncomeCategoryForTransaction = (index: number, categoryId: string) => {
+    setTransactions(prev => prev.map((t, i) => 
+      i === index ? { ...t, incomeCategoryId: categoryId } : t
+    ));
   };
 
   const handleClose = () => {
     setStep('upload');
     setTransactions([]);
     setIsLoading(false);
+    setIncomeCategories([]);
     onClose();
   };
 
@@ -321,7 +407,11 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                       transition={{ delay: index * 0.05 }}
                       className={cn(
                         'w-full max-w-full overflow-hidden flex items-center gap-3 p-3 rounded-lg border transition-colors',
-                        t.selected ? 'bg-primary/5 border-primary/20' : 'bg-muted/50'
+                        t.selected 
+                          ? t.isIncome 
+                            ? 'bg-positive/5 border-positive/20' 
+                            : 'bg-primary/5 border-primary/20' 
+                          : 'bg-muted/50'
                       )}
                     >
                       <Checkbox
@@ -330,14 +420,46 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                         className="shrink-0"
                       />
 
+                      <div className={cn(
+                        'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
+                        t.isIncome ? 'bg-positive/20 text-positive' : 'bg-muted'
+                      )}>
+                        {t.isIncome ? <Wallet className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
+                      </div>
+
                       <div className="flex-1 min-w-0 overflow-hidden">
-                        <p className="font-medium truncate text-sm" title={t.description}>
-                          {t.description}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate text-sm" title={t.description}>
+                            {t.description}
+                          </p>
+                          {t.isIncome && (
+                            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-positive/20 text-positive font-medium">
+                              RECEITA
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 overflow-hidden">
                           <span className="shrink-0">{t.date}</span>
                           <span className="shrink-0">•</span>
-                          <span className="truncate min-w-0">{getCategoryName(t.categoryId)}</span>
+                          {t.isIncome ? (
+                            <Select
+                              value={t.incomeCategoryId || ''}
+                              onValueChange={(value) => setIncomeCategoryForTransaction(index, value)}
+                            >
+                              <SelectTrigger className="h-5 text-xs border-0 bg-transparent p-0 w-auto min-w-[80px]">
+                                <SelectValue placeholder="Categoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {incomeCategories.map(cat => (
+                                  <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                                    {cat.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="truncate min-w-0">{getCategoryName(t.categoryId)}</span>
+                          )}
                           <span className="shrink-0">•</span>
                           <span className="shrink-0 capitalize">{t.paymentMethod}</span>
                         </div>
@@ -346,10 +468,10 @@ export function UploadModal({ open, onClose }: UploadModalProps) {
                       <p
                         className={cn(
                           'font-semibold whitespace-nowrap shrink-0 text-sm',
-                          t.amount >= 0 ? 'text-negative' : 'text-positive'
+                          t.isIncome ? 'text-positive' : 'text-negative'
                         )}
                       >
-                        {t.amount >= 0 ? '-' : '+'}{formatCurrency(Math.abs(t.amount))}
+                        {t.isIncome ? '+' : '-'}{formatCurrency(t.amount)}
                       </p>
                     </motion.div>
                   ))}

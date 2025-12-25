@@ -160,7 +160,12 @@ Responda APENAS com um JSON válido no formato:
         description.includes('crédito em conta') ||
         description.includes('credito em conta') ||
         description.includes('estorno') ||
-        description.includes('reembolso');
+        description.includes('reembolso') ||
+        description.includes('salário') ||
+        description.includes('salario') ||
+        description.includes('rendimento') ||
+        description.includes('dividendo') ||
+        description.includes('aluguel recebido');
 
       const isExpense =
         description.includes('transferência enviada') ||
@@ -171,17 +176,16 @@ Responda APENAS com um JSON válido no formato:
         description.includes('fatura') ||
         description.includes('boleto');
       
-      let finalAmount = amount;
-      if (isIncome && amount > 0) {
-        finalAmount = -Math.abs(amount); // Income should be negative (money coming in)
-      } else if (isExpense && amount < 0) {
-        finalAmount = Math.abs(amount); // Expense should be positive (money going out)
-      }
+      let finalAmount = Math.abs(amount);
+      
+      // For income, we'll flag it but keep amount positive for display
+      // The frontend will handle the sign/treatment based on isIncome flag
       
       return {
         ...t,
-        categoryId: categorizeExpense(t.description),
+        categoryId: isIncome ? null : categorizeExpense(t.description),
         amount: finalAmount,
+        isIncome: isIncome,
       };
     });
 

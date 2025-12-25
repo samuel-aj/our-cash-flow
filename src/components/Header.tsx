@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useAuth } from '@/hooks/useAuth';
 import { formatMonth, getCurrentMonth } from '@/lib/finance-utils';
 import { addMonths, subMonths, parse, format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Undo2, LogOut, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Undo2, LogOut, Upload, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -31,6 +32,7 @@ interface HeaderProps {
 }
 
 export function Header({ onQuickAdd, onUpload }: HeaderProps) {
+  const navigate = useNavigate();
   const { state, setCurrentMonth, closeDay, undo, canUndo } = useFinance();
   const { user, signOut } = useAuth();
   const [closeDayOpen, setCloseDayOpen] = useState(false);
@@ -168,6 +170,11 @@ export function Header({ onQuickAdd, onUpload }: HeaderProps) {
                 <div className="px-2 py-1.5">
                   <p className="text-sm font-medium truncate">{user?.email}</p>
                 </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/incomes')} className="cursor-pointer">
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Receitas
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
                   <LogOut className="h-4 w-4 mr-2" />
