@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Incomes from "./pages/Incomes";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -42,6 +43,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Index />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/incomes"
+            element={
+              <ProtectedRoute>
+                <Incomes />
               </ProtectedRoute>
             }
           />
