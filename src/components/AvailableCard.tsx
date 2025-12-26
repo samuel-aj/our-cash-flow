@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
-import { calculateAvailable, formatCurrency } from '@/lib/finance-utils';
-import { TrendingDown, TrendingUp, AlertTriangle } from 'lucide-react';
+import { calculateAvailableWithIncome, formatCurrency } from '@/lib/finance-utils';
+import { TrendingDown, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMonthlyIncomes } from '@/hooks/useMonthlyIncomes';
 
 interface AnimatedNumberProps {
   value: number;
@@ -28,11 +29,16 @@ function AnimatedNumber({ value, className }: AnimatedNumberProps) {
 
 export function AvailableCard() {
   const { state, getCurrentBudget } = useFinance();
+  const { totalIncome, incomes, loading: incomesLoading } = useMonthlyIncomes(state.currentMonth);
   const budget = getCurrentBudget();
   const [previousValue, setPreviousValue] = useState<number | null>(null);
   const [shouldPulse, setShouldPulse] = useState(false);
 
-  const available = calculateAvailable(
+  // Use incomes from Supabase if available, otherwise fallback to budget.income
+  const effectiveIncome = incomes.length > 0 ? totalIncome : (budget?.income || 0);
+
+  const available = calculateAvailableWithIncome(
+    effectiveIncome,
     budget,
     state.expenses,
     state.installments,
@@ -71,16 +77,30 @@ export function AvailableCard() {
     return 'Saldo saudável';
   };
 
-  if (!budget) {
+  // Show loading state while fetching incomes
+  if (incomesLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="card-elevated p-8 flex items-center justify-center"
+      >
+        <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+      </motion.div>
+    );
+  }
+
+  // If no budget and no incomes, show prompt to configure
+  if (!budget && incomes.length === 0) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="card-elevated p-8 text-center"
       >
-        <p className="text-muted-foreground mb-2">Configure o orçamento do mês</p>
+        <p className="text-muted-foreground mb-2">Configure suas finanças</p>
         <p className="text-sm text-muted-foreground/70">
-          Defina sua receita mensal e compromissos fixos para começar.
+          Cadastre suas receitas na seção "Receitas" ou configure o orçamento mensal para começar.
         </p>
       </motion.div>
     );

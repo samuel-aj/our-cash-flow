@@ -68,6 +68,20 @@ export function calculateAvailable(
   month: string
 ): number {
   const income = budget?.income || 0;
+  return calculateAvailableWithIncome(income, budget, expenses, installments, month);
+}
+
+/**
+ * Calculate available amount for the month with explicit income value
+ * Available = Income - Fixed Commitments - Installments Due This Month - Expenses This Month
+ */
+export function calculateAvailableWithIncome(
+  income: number,
+  budget: MonthlyBudget | undefined,
+  expenses: Expense[],
+  installments: Installment[],
+  month: string
+): number {
   const fixedTotal = budget?.fixedCommitments.reduce((sum, c) => sum + c.amount, 0) || 0;
   
   // Filter expenses for current month (excluding recurring parent entries)
