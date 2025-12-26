@@ -1,14 +1,19 @@
 import { motion } from 'framer-motion';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatCurrency, getMonthTotal, getInstallmentsTotal } from '@/lib/finance-utils';
-import { Wallet, CalendarClock, CreditCard, TrendingUp } from 'lucide-react';
+import { Wallet, CalendarClock, CreditCard, TrendingUp, Loader2 } from 'lucide-react';
 import { INVESTMENT_CATEGORY_ID } from '@/types/expense';
+import { useMonthlyIncomes } from '@/hooks/useMonthlyIncomes';
+import { useNavigate } from 'react-router-dom';
 
 export function SummaryCards() {
   const { state, getCurrentBudget } = useFinance();
+  const { totalIncome, loading: incomesLoading, incomes } = useMonthlyIncomes(state.currentMonth);
+  const navigate = useNavigate();
   const budget = getCurrentBudget();
 
-  const income = budget?.income || 0;
+  // Use incomes from Supabase, fallback to budget.income if no incomes
+  const income = incomes.length > 0 ? totalIncome : (budget?.income || 0);
   const fixedTotal = budget?.fixedCommitments.reduce((sum, c) => sum + c.amount, 0) || 0;
   const installmentsTotal = getInstallmentsTotal(state.installments, state.currentMonth);
   
@@ -24,6 +29,8 @@ export function SummaryCards() {
       icon: Wallet,
       color: 'text-primary',
       bgColor: 'bg-primary-light',
+      onClick: () => navigate('/incomes'),
+      badge: incomes.length > 0 ? `${incomes.length} entrada${incomes.length > 1 ? 's' : ''}` : undefined,
     },
     {
       label: 'Compromissos fixos',
@@ -56,10 +63,15 @@ export function SummaryCards() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
-          className="summary-card flex items-center gap-4"
+          className={`summary-card flex items-center gap-4 ${card.onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
+          onClick={card.onClick}
         >
           <div className={`p-3 rounded-xl ${card.bgColor}`}>
-            <card.icon className={`h-5 w-5 ${card.color}`} />
+            {incomesLoading && card.label === 'Receita mensal' ? (
+              <Loader2 className={`h-5 w-5 ${card.color} animate-spin`} />
+            ) : (
+              <card.icon className={`h-5 w-5 ${card.color}`} />
+            )}
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -68,6 +80,9 @@ export function SummaryCards() {
             <p className="text-xl font-semibold text-foreground">
               {formatCurrency(card.value)}
             </p>
+            {card.badge && (
+              <p className="text-xs text-muted-foreground">{card.badge}</p>
+            )}
           </div>
         </motion.div>
       ))}
