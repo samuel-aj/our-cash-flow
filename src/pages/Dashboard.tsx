@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FinanceProvider } from '@/contexts/FinanceContext';
+import { FinanceProvider, useFinance } from '@/contexts/FinanceContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { AvailableCard } from '@/components/AvailableCard';
 import { SummaryCards, ExpensesTotalCard } from '@/components/SummaryCards';
@@ -8,9 +10,11 @@ import { Sidebar } from '@/components/Sidebar';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { UploadModal } from '@/components/UploadModal';
+import { Loader2 } from 'lucide-react';
 import type { Expense } from '@/types/expense';
 
 function DashboardContent() {
+  const { loading } = useFinance();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -34,6 +38,17 @@ function DashboardContent() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando seus dados...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -107,10 +122,35 @@ function DashboardContent() {
   );
 }
 
-export default function Dashboard() {
+function AuthenticatedDashboard() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <FinanceProvider>
       <DashboardContent />
     </FinanceProvider>
   );
+}
+
+export default function Dashboard() {
+  return <AuthenticatedDashboard />;
 }
